@@ -1,6 +1,6 @@
 streamlit==1.32.0
-tensorflow-cpu==2.13.0
-pillow
+tensorflow-cpu>=2.13.0
+Pillow
 numpy
 requests
 h5py
