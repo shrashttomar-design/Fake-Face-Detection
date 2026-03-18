@@ -53,3 +53,8 @@ if uploaded_file is not None:
         st.error(f"❌ FAKE FACE ({confidence*100:.2f}%)")
     else:
         st.success(f"✅ REAL FACE ({(1-confidence)*100:.2f}%)")
+st.write("⏳ Loading model... please wait")
+
+model = load_my_model()
+
+st.write("✅ Model loaded")
