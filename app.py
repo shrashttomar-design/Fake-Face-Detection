@@ -42,10 +42,13 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    img = np.array(image)
-    img = cv2.resize(img, (128,128))
-    img = img / 255.0
-    img = np.reshape(img, (1,128,128,3))
+from PIL import Image
+
+    image = Image.open(uploaded_file)
+    image = image.resize((128,128))
+
+    img = np.array(image)/255.0
+    img = np.reshape(img,(1,128,128,3))
 
     prediction = model.predict(img)
 
