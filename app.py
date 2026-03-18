@@ -10,62 +10,98 @@ Original file is located at
 
 import streamlit as st
 import numpy as np
-import tensorflow as tf
 from tensorflow.keras.models import load_model
 from PIL import Image
 import requests
 import os
 
-# 1. Configuration - Move to the VERY top
+# -------------------------------
+# CONFIG (MUST BE FIRST)
+# -------------------------------
 st.set_page_config(page_title="Fake Face Detection", layout="centered")
 
-# Model info
+# -------------------------------
+# MODEL CONFIG
+# -------------------------------
 MODEL_URL = "https://github.com/shrashttomar-design/Fake-Face-Detection/releases/download/v1.0.0/fake_face_model.keras"
 MODEL_PATH = "fake_face_model.keras"
 
+# -------------------------------
+# DOWNLOAD FUNCTION (SAFE)
+# -------------------------------
+def download_model():
+    with st.spinner("📥 Downloading AI model... please wait"):
+        response = requests.get(MODEL_URL, stream=True)
+
+        if response.status_code != 200:
+            st.error("❌ Failed to download model. Check your GitHub link.")
+            return False
+
+        total_size = int(response.headers.get("content-length", 0))
+        progress_bar = st.progress(0)
+        downloaded = 0
+
+        with open(MODEL_PATH, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+
+                    if total_size > 0:
+                        progress = int((downloaded / total_size) * 100)
+                        progress_bar.progress(min(progress, 100))
+
+    st.success("✅ Model downloaded successfully!")
+    return True
+
+
+# -------------------------------
+# LOAD MODEL (CACHED)
+# -------------------------------
 @st.cache_resource
 def load_my_model():
     if not os.path.exists(MODEL_PATH):
-        with st.spinner("Downloading model from GitHub... this may take a moment."):
-            response = requests.get(MODEL_URL, stream=True)
-            if response.status_code == 200:
-                with open(MODEL_PATH, "wb") as f:
-                    f.write(response.content)
-            else:
-                st.error("Failed to download model. Check the MODEL_URL.")
-                return None
+        success = download_model()
+        if not success:
+            return None
+
     return load_model(MODEL_PATH)
 
-# Load the model once
+
+# Load model once
 model = load_my_model()
 
+# -------------------------------
+# UI
+# -------------------------------
 st.title("🕵️ Fake Face Detection System")
 st.write("Upload an image to check whether it is **REAL** or **FAKE**")
 
-uploaded_file = st.file_uploader("Choose an image...", type=["jpg","png","jpeg"])
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "png", "jpeg"])
 
+# -------------------------------
+# PREDICTION
+# -------------------------------
 if uploaded_file is not None and model is not None:
-    # Display image
-    image = Image.open(uploaded_file).convert('RGB') # Ensure 3 channels
+
+    image = Image.open(uploaded_file).convert('RGB')
     st.image(image, caption="Uploaded Image", use_container_width=True)
-    
-    # Preprocessing
-    with st.spinner("Analyzing..."):
+
+    with st.spinner("🔍 Analyzing image..."):
         img_resized = image.resize((128, 128))
         img_array = np.array(img_resized) / 255.0
-        img_reshape = np.expand_dims(img_array, axis=0) # Better than np.reshape for clarity
+        img_array = np.expand_dims(img_array, axis=0)
 
-        # Prediction
-        prediction = model.predict(img_reshape)
+        prediction = model.predict(img_array)
         confidence = float(prediction[0][0])
 
     st.divider()
     st.subheader("Result:")
 
     if confidence > 0.5:
-        st.error(f"❌ **FAKE FACE** (Confidence: {confidence*100:.2f}%)")
+        st.error(f"❌ **FAKE FACE** ({confidence*100:.2f}% confidence)")
     else:
-        st.success(f"✅ **REAL FACE** (Confidence: {(1-confidence)*100:.2f}%)")
+        st.success(f"✅ **REAL FACE** ({(1-confidence)*100:.2f}% confidence)")
 
 elif model is None:
-    st.warning("Model could not be loaded. Please check the logs.")
+    st.warning("⚠️ Model could not be loaded. Check logs or URL.")
