@@ -9,18 +9,16 @@ Original file is located at
 
 
 import streamlit as st
-import cv2
 import numpy as np
 from tensorflow.keras.models import load_model
 from PIL import Image
 import requests
 import os
 
-# 🔗 GitHub Release model link (IMPORTANT)
+# Model link (GitHub release)
 MODEL_URL = "https://github.com/shrashttomar-design/Fake-Face-Detection/releases/download/v1.0.0/fake_face_model.keras"
 MODEL_PATH = "fake_face_model.keras"
 
-# Download model if not exists
 @st.cache_resource
 def load_my_model():
     if not os.path.exists(MODEL_PATH):
@@ -30,7 +28,6 @@ def load_my_model():
 
 model = load_my_model()
 
-# UI
 st.set_page_config(page_title="Fake Face Detection", layout="centered")
 
 st.title("🕵️ Fake Face Detection System")
@@ -40,24 +37,19 @@ uploaded_file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
-
-from PIL import Image
-
-    image = Image.open(uploaded_file)
     image = image.resize((128,128))
 
-    img = np.array(image)/255.0
-    img = np.reshape(img,(1,128,128,3))
+    st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    img = np.array(image) / 255.0
+    img = np.reshape(img, (1,128,128,3))
 
     prediction = model.predict(img)
-
     confidence = float(prediction[0][0])
 
     st.subheader("Result:")
 
     if confidence > 0.5:
-        st.error(f"❌ FAKE FACE ({confidence*100:.2f}% confidence)")
+        st.error(f"❌ FAKE FACE ({confidence*100:.2f}%)")
     else:
-        st.success(f"✅ REAL FACE ({(1-confidence)*100:.2f}% confidence)")
-
+        st.success(f"✅ REAL FACE ({(1-confidence)*100:.2f}%)")
