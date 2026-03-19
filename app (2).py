@@ -9,84 +9,80 @@ Original file is located at
 
 
 
+# app.py
 import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
-import requests
 import os
+import requests
 
-# --- Config ---
+# -------------------------------
+# 1. Configuration & Model
+# -------------------------------
+st.set_page_config(page_title="CyberFusion-AI | Fake Face Detection", layout="centered")
+
 MODEL_URL = "https://github.com/shrashttomar-design/Fake-Face-Detection/releases/download/v.1.0/model.h5"
 MODEL_PATH = "model.h5"
+
+# Ensure model folder exists
 os.makedirs("models", exist_ok=True)
 
-st.set_page_config(
-    page_title="CyberFusion-AI | Fake Face Detection",
-    layout="centered"
-)
-
-# --- Load Model ---
+# -------------------------------
+# 2. Load Model
+# -------------------------------
 @st.cache_resource
 def load_model():
-    """
-    Downloads the model from GitHub Release if not already present,
-    then loads it with TensorFlow.
-    """
-    try:
-        if not os.path.exists(MODEL_PATH):
-            with st.spinner("Downloading model from GitHub..."):
-                response = requests.get(MODEL_URL, stream=True, timeout=60)
-                response.raise_for_status()
-                with open(MODEL_PATH, "wb") as f:
-                    for chunk in response.iter_content(8192):
-                        f.write(chunk)
-        model = tf.keras.models.load_model(MODEL_PATH)
-        return model
-    except Exception as e:
-        st.error(f"Error loading model: {e}")
-        return None
+    # Download the model if not present
+    if not os.path.exists(MODEL_PATH):
+        with st.spinner("Downloading model from GitHub..."):
+            response = requests.get(MODEL_URL, stream=True, timeout=60)
+            response.raise_for_status()
+            with open(MODEL_PATH, "wb") as f:
+                for chunk in response.iter_content(8192):
+                    f.write(chunk)
+    # Load Keras model
+    model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+    return model
 
-# --- Prediction ---
-def predict(image, model):
-    """
-    Preprocesses the uploaded image and predicts Fake/Real.
-    """
-    image = image.convert("RGB")  # Ensure 3 channels
-    img = image.resize((128, 128))  # match your model input size
-    img_array = tf.keras.preprocessing.image.img_to_array(img)
-    img_array = img_array / 255.0  # normalize
-    img_array = np.expand_dims(img_array, axis=0)
+fake_face_model = load_model()
 
-    prediction = model.predict(img_array)
-    score = float(prediction[0][0])
-
-    if score > 0.5:
-        return "FAKE", score
-    else:
-        return "REAL", 1 - score
-
-# --- UI ---
-st.title("🛡️ CyberFusion-AI")
-st.subheader("Deepfake & Fake Face Recognition")
+# -------------------------------
+# 3. UI Layout
+# -------------------------------
+st.title("🛡️ CyberFusion-AI | Fake Face Detection")
 st.write("Upload an image to verify if the face is digitally altered or authentic.")
 
-uploaded_file = st.file_uploader(
-    "Choose an image...",
-    type=["jpg", "jpeg", "png"]
-)
+uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
+if uploaded_file:
+    # Display the uploaded image
+    image = Image.open(uploaded_file).convert("RGB").resize((128, 128))
     st.image(image, caption="Uploaded Image", use_container_width=True)
-
+    
+    # Preprocess image
+    arr = np.array(image, dtype=np.float32) / 255.0
+    arr = np.expand_dims(arr, axis=0)  # Shape: (1, 128, 128, 3)
+    
     if st.button("Analyze Image"):
-        model = load_model()
-        if model is not None:
-            with st.spinner("Analyzing..."):
-                label, confidence = predict(image, model)
-
-            if label == "FAKE":
-                st.error(f"🚨 Prediction: {label} (Confidence: {confidence:.2%})")
-            else:
-                st.success(f"✅ Prediction: {label} (Confidence: {confidence:.2%})")
+        with st.spinner("🕵️ Running AI Forensic Scan..."):
+            try:
+                prediction = fake_face_model.predict(arr)
+                score = float(prediction[0][0])
+                
+                # Interpret results
+                if score < 0.5:
+                    res = "REAL"
+                    confidence = (1 - score) * 100
+                    st.success(f"✅ Authentic Image Detected")
+                    st.metric("Probability of Authenticity", f"{confidence:.2f}%")
+                    st.progress(int(confidence))
+                else:
+                    res = "FAKE"
+                    confidence = score * 100
+                    st.error(f"🚨 AI Generated / Manipulated Image")
+                    st.metric("AI Confidence Score", f"{confidence:.2f}%")
+                    st.progress(int(confidence))
+            except Exception as e:
+                st.error(f"Prediction Error: {e}")
+                st.info("Tip: Ensure your model input shape is 128x128.")
