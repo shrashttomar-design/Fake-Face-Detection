@@ -13,52 +13,79 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
-import gc  # Garbage collector to free up RAM
+import requests
+import os
 
-# --- Page Config ---
-st.set_page_config(page_title="CyberFusion-AI", page_icon="🛡️")
+# --- Configuration ---
+MODEL_URL = "https://github.com/shrashttomar-design/Fake-Face-Detection/releases/download/v.1.0/model.h5"
+MODEL_PATH = "model.h5"
 
-# --- Optimized Model Loading ---
+st.set_page_config(
+    page_title="CyberFusion-AI | Fake Face Detection",
+    layout="centered"
+)
+
+# --- Load Model ---
 @st.cache_resource
-def load_my_model():
-    # Loading the .h5 model you uploaded to your repo
-    model = tf.keras.models.load_model("fake_face_model.h5")
-    return model
+def load_model():
+    """
+    Downloads the model from GitHub Release if not already present,
+    then loads it with TensorFlow.
+    """
+    try:
+        if not os.path.exists(MODEL_PATH):
+            with st.spinner("Downloading model from GitHub..."):
+                response = requests.get(MODEL_URL, stream=True, timeout=60)
+                response.raise_for_status()
+                with open(MODEL_PATH, "wb") as f:
+                    for chunk in response.iter_content(8192):
+                        f.write(chunk)
+        model = tf.keras.models.load_model(MODEL_PATH)
+        return model
+    except Exception as e:
+        st.error(f"Error loading model: {e}")
+        return None
 
-# --- Main UI ---
+# --- Prediction ---
+def predict(image, model):
+    """
+    Preprocesses the uploaded image and predicts Fake/Real.
+    """
+    image = image.convert("RGB")  # Ensure 3 channels
+    img = image.resize((128, 128))  # match your model input size
+    img_array = tf.keras.preprocessing.image.img_to_array(img)
+    img_array = img_array / 255.0  # normalize
+    img_array = np.expand_dims(img_array, axis=0)
+
+    prediction = model.predict(img_array)
+    score = float(prediction[0][0])
+
+    if score > 0.5:
+        return "FAKE", score
+    else:
+        return "REAL", 1 - score
+
+# --- UI ---
 st.title("🛡️ CyberFusion-AI")
-st.markdown("### Public Release: Deepfake Detection")
+st.subheader("Deepfake & Fake Face Recognition")
+st.write("Upload an image to verify if the face is digitally altered or authentic.")
 
-uploaded_file = st.file_uploader("Upload a face to analyze", type=["jpg", "png", "jpeg"])
+uploaded_file = st.file_uploader(
+    "Choose an image...",
+    type=["jpg", "jpeg", "png"]
+)
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_container_width=True)
-    
-    if st.button("Start Analysis"):
-        with st.spinner("Processing pixels..."):
-            # 1. Load Model
-            model = load_my_model()
-            
-            # 2. Preprocess
-            img = image.resize((128, 128))
-            img_array = tf.keras.preprocessing.image.img_to_array(img)
-            img_array = img_array / 255.0  # Normalization
-            img_array = np.expand_dims(img_array, axis=0)
-            
-            # 3. Predict
-            prediction = model.predict(img_array)
-            score = prediction[0][0]
-            
-            # 4. Show Result
-            if score > 0.5:
-                st.error(f"**Result: FAKE** (Confidence: {score:.2%})")
-            else:
-                st.success(f"**Result: REAL** (Confidence: {(1-score):.2%})")
-            
-            # 5. Cleanup memory
-            del img_array
-            gc.collect()
 
-st.divider()
-st.caption("CyberFusion-AI Project | Built with Python & TensorFlow")
+    if st.button("Analyze Image"):
+        model = load_model()
+        if model is not None:
+            with st.spinner("Analyzing..."):
+                label, confidence = predict(image, model)
+
+            if label == "FAKE":
+                st.error(f"🚨 Prediction: {label} (Confidence: {confidence:.2%})")
+            else:
+                st.success(f"✅ Prediction: {label} (Confidence: {confidence:.2%})")
