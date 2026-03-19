@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1_6UVaFDV5soepzozBULIl2QHlfGI1_F0
 """
 
-!pip install streamlit tensorflow opencv-python pillow requests
+
 
 import streamlit as st
 import tensorflow as tf
