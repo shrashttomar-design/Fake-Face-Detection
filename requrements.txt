@@ -1,5 +1,6 @@
 streamlit
+tensorflow
+h5py
 numpy
 pillow
 requests
-tensorflow-cpu
