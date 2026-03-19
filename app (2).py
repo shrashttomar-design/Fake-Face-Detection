@@ -19,6 +19,7 @@ import os
 # --- Config ---
 MODEL_URL = "https://github.com/shrashttomar-design/Fake-Face-Detection/releases/download/v.1.0/model.h5"
 MODEL_PATH = "model.h5"
+os.makedirs("models", exist_ok=True)
 
 st.set_page_config(
     page_title="CyberFusion-AI | Fake Face Detection",
