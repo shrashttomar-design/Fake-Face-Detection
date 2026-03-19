@@ -3,4 +3,3 @@ tensorflow
 h5py
 numpy
 pillow
-requests
