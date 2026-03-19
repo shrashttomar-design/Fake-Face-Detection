@@ -13,71 +13,52 @@ import streamlit as st
 import tensorflow as tf
 import numpy as np
 from PIL import Image
-import requests
-import os
+import gc  # Garbage collector to free up RAM
 
-# --- Configuration ---
-# Replace with your actual GitHub Release direct download link
-MODEL_URL = "https://github.com/shrashttomar-design/Fake-Face-Detection/releases/download/v.1.0/model.h5"
-MODEL_PATH = "fake_face_model.h5"
+# --- Page Config ---
+st.set_page_config(page_title="CyberFusion-AI", page_icon="🛡️")
 
-st.set_page_config(page_title="Fake Face Detection", page_icon="🛡️")
-
-# --- Functions ---
+# --- Optimized Model Loading ---
 @st.cache_resource
-def load_h5_model():
-    if not os.path.exists(MODEL_PATH):
-        with st.status("Downloading AI Model...", expanded=True) as status:
-            response = requests.get(MODEL_URL, stream=True)
-            with open(MODEL_PATH, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            status.update(label="Model Downloaded!", state="complete", expanded=False)
-
-    # Load the .h5 model
-    return tf.keras.models.load_model(MODEL_PATH)
-
-def process_and_predict(image, model):
-    # Preprocessing to 128x128 as per your training specs
-    img = image.resize((128, 128))
-    img_array = tf.keras.preprocessing.image.img_to_array(img)
-    img_array = img_array / 255.0  # Normalization (ensure this matches your training)
-    img_array = np.expand_dims(img_array, axis=0)
-
-    prediction = model.predict(img_array)
-    # Binary classification: usually 0 for Real, 1 for Fake (or vice versa)
-    score = prediction[0][0]
-    return score
-
-# --- Sidebar ---
-with st.sidebar:
-    st.title("About Project")
-    st.info("CyberFusion-AI uses a Convolutional Neural Network (CNN) to detect artifacts in facial images that indicate a 'Fake' or 'Deepfake' origin.")
+def load_my_model():
+    # Loading the .h5 model you uploaded to your repo
+    model = tf.keras.models.load_model("fake_face_model.h5")
+    return model
 
 # --- Main UI ---
-st.title("🛡️ Fake Face Detection")
-st.write("### Fake Face Recognition System")
+st.title("🛡️ CyberFusion-AI")
+st.markdown("### Public Release: Deepfake Detection")
 
-uploaded_file = st.file_uploader("Upload a face image (JPG/PNG)", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Upload a face to analyze", type=["jpg", "png", "jpeg"])
 
-if uploaded_file:
-    col1, col2 = st.columns(2)
-
+if uploaded_file is not None:
     image = Image.open(uploaded_file)
-    with col1:
-        st.image(image, caption="Target Image", use_container_width=True)
-
-    with col2:
-        if st.button("Run Forensic Analysis", use_container_width=True):
-            model = load_h5_model()
-
-            with st.spinner("Analyzing pixels..."):
-                score = process_and_predict(image, model)
-
-            # Assuming 1 = Fake and 0 = Real. Adjust if your model is inverted.
+    st.image(image, caption="Uploaded Image", use_container_width=True)
+    
+    if st.button("Start Analysis"):
+        with st.spinner("Processing pixels..."):
+            # 1. Load Model
+            model = load_my_model()
+            
+            # 2. Preprocess
+            img = image.resize((128, 128))
+            img_array = tf.keras.preprocessing.image.img_to_array(img)
+            img_array = img_array / 255.0  # Normalization
+            img_array = np.expand_dims(img_array, axis=0)
+            
+            # 3. Predict
+            prediction = model.predict(img_array)
+            score = prediction[0][0]
+            
+            # 4. Show Result
             if score > 0.5:
-                st.error(f"**Result: FAKE**")
-                st.warning(f"Probability: {score:.2%}")
+                st.error(f"**Result: FAKE** (Confidence: {score:.2%})")
             else:
-                st.success(f"**Result: REAL**")
-                st.info(f"Probability: {(1-score):.2%}")
+                st.success(f"**Result: REAL** (Confidence: {(1-score):.2%})")
+            
+            # 5. Cleanup memory
+            del img_array
+            gc.collect()
+
+st.divider()
+st.caption("CyberFusion-AI Project | Built with Python & TensorFlow")
