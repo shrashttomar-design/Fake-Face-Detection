@@ -16,7 +16,7 @@ from PIL import Image
 import requests
 import os
 
-# --- Configuration ---
+# --- Config ---
 MODEL_URL = "https://github.com/shrashttomar-design/Fake-Face-Detection/releases/download/v.1.0/model.h5"
 MODEL_PATH = "model.h5"
 
