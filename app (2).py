@@ -85,9 +85,10 @@ if uploaded_file:
                 score = process_and_predict(image, model)
 
             # Assuming 1 = Fake and 0 = Real. Adjust if your model is inverted.
-            if score > 0.5:
-                st.error(f"**Result: FAKE**")
-                st.warning(f"Probability: {score:.2%}")
-            else:
-                st.success(f"**Result: REAL**")
-                st.info(f"Probability: {(1-score):.2%}")info("Tip: Ensure your model input shape is 128x128.")
+           if score > 0.5:
+    st.error("**Result: FAKE**")
+    st.warning(f"Probability: {score:.2%}")
+else:
+    st.success("**Result: REAL**")
+    st.info(f"Probability: {(1-score):.2%}")
+    st.info("Tip: Ensure your model input shape is 128x128.")
