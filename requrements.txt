@@ -1,5 +1,5 @@
-streamlit==1.29.0
-tensorflow-cpu==2.14.0
-numpy==1.25.2
-pillow==10.1.0
-requests==2.31.0
+tensorflow
+keras
+numpy
+opencv-python-headless
+streamlit
