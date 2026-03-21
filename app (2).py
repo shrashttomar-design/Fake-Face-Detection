@@ -51,7 +51,7 @@ def process_and_predict(image, model):
 # --- Sidebar ---
 with st.sidebar:
     st.title("About Project")
-    st.info("CyberFusion-AI uses a Convolutional Neural Network (CNN) to detect artifacts in facial images that indicate a 'Fake' or 'Deepfake' origin.")
+    st.info("Fake Face Detection uses a Convolutional Neural Network (CNN) to detect artifacts in facial images that indicate a 'Fake' or 'Deepfake' origin.")
 
 # --- Main UI ---
 st.title("🛡️ Fake Face Detection")
